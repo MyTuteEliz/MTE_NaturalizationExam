@@ -1,0 +1,55 @@
+<!--
+====================================================
+FILE: index.html
+
+PURPOSE:
+Entry point for the PWA (iPad opens this)
+
+SAFE TO EDIT:
+- title text
+- module labels (rarely needed)
+
+DO NOT TOUCH:
+- script links
+====================================================
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Citizenship Study App</title>
+
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="manifest" href="manifest.json"/>
+</head>
+
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="screen">
+  <h2>Enter Access Code</h2>
+  <input id="passwordInput" type="password" placeholder="Password"/>
+  <button onclick="login()">Unlock</button>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+
+  <div id="nav">
+    <h2 id="moduleTitle"></h2>
+  </div>
+
+  <div id="content"></div>
+
+  <div id="controls">
+    <button onclick="prevItem()">Back</button>
+    <button onclick="nextItem()">Next</button>
+  </div>
+
+</div>
+
+<script type="module" src="app.js"></script>
+
+</body>
+</html>
