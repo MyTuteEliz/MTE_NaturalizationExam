@@ -1,0 +1,8 @@
+{
+  "name": "Citizenship Study App",
+  "short_name": "Citizenship",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2c3e50"
+}
