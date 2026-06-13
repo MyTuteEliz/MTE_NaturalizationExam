@@ -1,0 +1,27 @@
+{
+  "name": "US Citizenship Study App",
+  "short_name": "Citizenship",
+  "description": "Interactive study app for the US Citizenship & Naturalization exam",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1B6CA8",
+  "theme_color": "#1B6CA8",
+  "lang": "en-US",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

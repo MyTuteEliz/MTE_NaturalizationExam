@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Citizenship">
+  <meta name="theme-color" content="#1B6CA8">
+  <title>US Citizenship Study App</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <!-- iPad home screen icon (replace icons/icon-192.png with your own) -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Firebase SDKs (compat v9) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     LOADING OVERLAY
+════════════════════════════════════════════════════════ -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p id="loading-msg">Loading…</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+════════════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL OVERLAY
+════════════════════════════════════════════════════════ -->
+<div id="modal-overlay" class="hidden">
+  <div class="modal-box">
+    <h2 id="modal-title">Modal</h2>
+    <div id="modal-body"></div>
+    <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end;">
+      <button class="btn btn-outline btn-sm" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: LOGIN
+════════════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="flag">🇺🇸</div>
+      <h1>US Citizenship<br>Study App</h1>
+      <p>Приложение для изучения гражданства</p>
+    </div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" autocomplete="email"
+               placeholder="your@email.com" required>
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password / Пароль</label>
+        <input id="login-password" type="password" autocomplete="current-password"
+               placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">
+        Sign In / Войти
+      </button>
+      <p class="login-error" id="login-error"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: STUDENT HUB (Dashboard)
+════════════════════════════════════════════════════════ -->
+<div id="screen-hub" class="screen">
+  <div class="hub-header">
+    <div class="hub-header-row">
+      <div>
+        <h1 id="hub-greeting">Hello! 👋</h1>
+        <p>Choose a section to study · Выберите раздел</p>
+      </div>
+      <button class="hub-logout" id="hub-logout-btn">Log Out</button>
+    </div>
+  </div>
+  <div class="scroll-content">
+    <div class="section-grid" id="section-grid">
+      <!-- Rendered by app.js -->
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: SECTION (Lesson List)
+════════════════════════════════════════════════════════ -->
+<div id="screen-section" class="screen">
+  <div class="section-header-band" id="section-band">
+    <button class="back-btn" id="back-to-hub">‹</button>
+    <span class="section-icon" id="section-band-icon">📚</span>
+    <h1 id="section-name-title">Section</h1>
+  </div>
+  <div class="scroll-content">
+    <div id="lesson-list">
+      <!-- Rendered by app.js -->
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: LESSON (Activity List)
+════════════════════════════════════════════════════════ -->
+<div id="screen-lesson" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" id="back-to-section">‹</button>
+    <h1 id="lesson-title">Lesson</h1>
+  </div>
+  <div class="scroll-content">
+    <div id="activity-list">
+      <!-- Rendered by app.js -->
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: FLASHCARD ACTIVITY
+════════════════════════════════════════════════════════ -->
+<div id="screen-activity" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" id="back-to-lesson-from-activity">‹</button>
+    <h1 id="activity-type-label">Flashcards</h1>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="activity-progress">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="card-progress-fill" style="width:0%"></div>
+    </div>
+    <span id="card-progress-text">1 / 1</span>
+  </div>
+
+  <!-- Flashcard area -->
+  <div class="flashcard-area">
+    <div class="flashcard-scene">
+      <div class="flashcard-inner" id="flashcard-inner">
+        <!-- FRONT -->
+        <div class="flashcard-face front">
+          <span class="card-label">FRONT</span>
+          <div id="card-front-content" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;"></div>
+        </div>
+        <!-- BACK -->
+        <div class="flashcard-face back">
+          <span class="card-label">BACK</span>
+          <div id="card-back-content" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flip button (shown on front) -->
+    <button class="flip-btn" id="flip-btn">Flip Card / Перевернуть ▼</button>
+
+    <!-- Easy / Hard buttons (shown on back) -->
+    <div class="difficulty-btns hidden" id="difficulty-btns">
+      <button class="btn btn-danger" id="btn-hard">😓 Hard</button>
+      <button class="btn btn-success" id="btn-easy">😊 Easy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: MATCHING EXERCISE
+════════════════════════════════════════════════════════ -->
+<div id="screen-matching" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" id="back-to-lesson-from-match">‹</button>
+    <h1 id="match-activity-name">Matching</h1>
+  </div>
+  <div class="activity-progress">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="match-progress-fill" style="width:0%"></div>
+    </div>
+    <span id="match-progress-text">1 / 1</span>
+  </div>
+  <div class="scroll-content">
+    <div class="matching-question">
+      <h2>🎧 Listen to the question, then tap the match below:</h2>
+      <button class="audio-btn" id="match-listen-btn" style="margin:0 auto;">▶️ Play Question</button>
+    </div>
+    <p class="tries-indicator" id="match-tries"></p>
+    <div class="matching-options" id="match-options">
+      <!-- Rendered by app.js -->
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: RECORDING EXERCISE
+════════════════════════════════════════════════════════ -->
+<div id="screen-recording" class="screen">
+  <div class="screen-header">
+    <button class="back-btn" id="back-to-lesson-from-rec">‹</button>
+    <h1>Speaking Practice 🎙️</h1>
+  </div>
+  <div class="activity-progress">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="rec-progress-fill" style="width:0%"></div>
+    </div>
+    <span id="rec-progress-text">1 / 1</span>
+  </div>
+  <div class="scroll-content">
+    <div class="recording-sentence" id="rec-sentence">
+      Read this sentence aloud.
+    </div>
+    <div class="recording-controls">
+      <button class="record-btn" id="rec-btn">⏺</button>
+      <p class="recording-label" id="rec-label">⏺ Tap to Record</p>
+      <div class="playback-row" style="width:100%;max-width:500px;">
+        <button class="btn btn-outline" id="rec-play-mine" disabled>▶️ My Recording</button>
+        <button class="btn btn-primary" id="rec-play-teacher" disabled>🎧 Teacher Audio</button>
+      </div>
+      <button class="btn btn-secondary btn-full" id="rec-next" style="max-width:500px;">
+        Next →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: ACTIVITY COMPLETION
+════════════════════════════════════════════════════════ -->
+<div id="screen-completion" class="screen">
+  <div class="completion-screen">
+    <div class="completion-emoji">🎉</div>
+    <h1>Activity Complete!</h1>
+    <p>Great work! You finished this activity.<br>Отличная работа!</p>
+    <button class="btn btn-success btn-full" style="max-width:400px;" id="completion-continue">
+      Continue to Next Activity →
+    </button>
+    <button class="btn btn-outline btn-full" style="max-width:400px;margin-top:12px;" id="completion-hub">
+      Back to Home 🏠
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCREEN: TEACHER PANEL
+════════════════════════════════════════════════════════ -->
+<div id="screen-teacher" class="screen">
+  <div class="teacher-header">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <h1>👩‍🏫 Teacher Panel</h1>
+        <p id="teacher-name">teacher@email.com</p>
+      </div>
+      <button class="hub-logout" id="teacher-logout-btn">Log Out</button>
+    </div>
+    <!-- Teacher navigation -->
+    <nav class="teacher-nav">
+      <button class="teacher-nav-btn active" data-panel="panel-sections">📚 Sections</button>
+      <button class="teacher-nav-btn" data-panel="panel-lessons">📋 Lessons</button>
+      <button class="teacher-nav-btn" data-panel="panel-cards">🃏 Cards</button>
+      <button class="teacher-nav-btn" data-panel="panel-matching">🔗 Matching</button>
+      <button class="teacher-nav-btn" data-panel="panel-students">📊 Students</button>
+      <button class="teacher-nav-btn" data-panel="panel-account">⚙️ Account</button>
+    </nav>
+  </div>
+
+  <div class="scroll-content">
+
+    <!-- ── PANEL: SECTIONS ─────────────────────────────── -->
+    <div class="teacher-panel active" id="panel-sections">
+      <div class="teacher-section-title">
+        📚 Manage Sections
+        <button class="btn btn-primary btn-sm" id="add-section-btn">+ Add Section</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Icon</th><th>Name</th><th>Colour</th><th>Order</th><th>Actions</th></tr></thead>
+          <tbody id="sections-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PANEL: LESSONS ──────────────────────────────── -->
+    <div class="teacher-panel" id="panel-lessons">
+      <div class="teacher-section-title">📋 Manage Lessons</div>
+      <div class="form-group" style="max-width:400px;margin-bottom:20px;">
+        <label>Select Section</label>
+        <select id="lesson-section-select" style="width:100%;border:2px solid #D5DBE3;border-radius:10px;padding:12px 16px;font-size:18px;">
+          <option value="">— Choose a section —</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" id="add-lesson-btn">+ Add Lesson</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Description</th><th>Order</th><th>Actions</th></tr></thead>
+          <tbody id="lessons-tbody"><tr><td colspan="4" class="text-muted">Select a section above.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PANEL: CARDS ────────────────────────────────── -->
+    <div class="teacher-panel" id="panel-cards">
+      <div class="teacher-section-title">🃏 Manage Cards & Activities</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;max-width:800px;margin-bottom:20px;">
+        <div class="form-group" style="margin:0;">
+          <label>Section</label>
+          <select id="card-section-select" style="width:100%;border:2px solid #D5DBE3;border-radius:10px;padding:10px 14px;font-size:16px;">
+            <option value="">— Section —</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Lesson</label>
+          <select id="card-lesson-select" style="width:100%;border:2px solid #D5DBE3;border-radius:10px;padding:10px 14px;font-size:16px;">
+            <option value="">— Lesson —</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Activity</label>
+          <select id="card-activity-select" style="width:100%;border:2px solid #D5DBE3;border-radius:10px;padding:10px 14px;font-size:16px;">
+            <option value="">— Activity —</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <button class="btn btn-outline btn-sm" id="add-activity-btn">+ Add Activity</button>
+        <button class="btn btn-primary btn-sm" id="add-card-btn">+ Add Card</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Content (front)</th><th>Type</th><th>Audio</th><th>Actions</th></tr></thead>
+          <tbody id="cards-tbody"><tr><td colspan="5" class="text-muted">Select section › lesson › activity above.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PANEL: MATCHING ─────────────────────────────── -->
+    <div class="teacher-panel" id="panel-matching">
+      <div class="teacher-section-title">🔗 Manage Matching Exercises</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:600px;margin-bottom:20px;">
+        <div class="form-group" style="margin:0;">
+          <label>Section</label>
+          <select id="match-section-select" style="width:100%;border:2px solid #D5DBE3;border-radius:10px;padding:10px 14px;font-size:16px;">
+            <option value="">— Section —</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Activity</label>
+          <select id="match-activity-select" style="width:100%;border:2px solid #D5DBE3;border-radius:10px;padding:10px 14px;font-size:16px;">
+            <option value="">— Activity —</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" id="add-match-item-btn">+ Add Matching Item</button>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Standard Question</th><th>Audio</th><th>Variations</th><th>Actions</th></tr></thead>
+          <tbody id="matching-items-tbody"><tr><td colspan="4" class="text-muted">Select section and activity above.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── PANEL: STUDENTS ─────────────────────────────── -->
+    <div class="teacher-panel" id="panel-students">
+      <div class="teacher-section-title">📊 Student Progress</div>
+      <div id="students-container">
+        <p class="text-muted text-center mt-24">Loading…</p>
+      </div>
+    </div>
+
+    <!-- ── PANEL: ACCOUNT ──────────────────────────────── -->
+    <div class="teacher-panel" id="panel-account">
+      <div class="teacher-section-title">⚙️ Account Settings</div>
+      <div class="card" style="max-width:480px;">
+        <p style="margin-bottom:16px;font-size:16px;">
+          Logged in as: <strong id="account-email"></strong>
+        </p>
+        <hr class="divider">
+        <h3 style="font-size:20px;margin-bottom:16px;">Change Password</h3>
+        <div class="form-group">
+          <label>New Password</label>
+          <input id="new-password" type="password" placeholder="Minimum 6 characters" minlength="6">
+        </div>
+        <button class="btn btn-primary" id="change-password-btn">Update Password</button>
+      </div>
+    </div>
+
+  </div><!-- /scroll-content -->
+</div><!-- /screen-teacher -->
+
+<!-- ════════════════════════════════════════════════════════
+     APP SCRIPTS (order matters — data first, then app, then teacher)
+════════════════════════════════════════════════════════ -->
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/teacher.js"></script>
+
+</body>
+</html>
