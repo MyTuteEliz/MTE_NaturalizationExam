@@ -15,12 +15,12 @@
 //   → Your Project → Project Settings → Your Apps → SDK setup
 // ════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
-  apiKey:            "PASTE_YOUR_API_KEY_HERE",
-  authDomain:        "PASTE_YOUR_AUTH_DOMAIN_HERE",
-  projectId:         "PASTE_YOUR_PROJECT_ID_HERE",
-  storageBucket:     "PASTE_YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
-  appId:             "PASTE_YOUR_APP_ID_HERE"
+  apiKey:            "AIzaSyArIrXe22IuftquFHD8YCJIERP9HTnWTj4",
+  authDomain:        "mte-naturalization-exam.firebaseapp.com",
+  projectId:         "mte-naturalization-exam",
+  storageBucket:     "mte-naturalization-exam.firebasestorage.app",
+  messagingSenderId: "776665352502",
+  appId:             "1:776665352502:web:9f7155a95ca6014716cb97"
 };
 // ════════════════════════════════════════════════════════════
 
