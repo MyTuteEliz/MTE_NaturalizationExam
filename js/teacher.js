@@ -274,8 +274,15 @@ $('card-activity-select').addEventListener('change', async function() {
 });
 
 async function refreshCardsTable() {
-  const cards = await DB.getCards(selectedActivityForCards);
-  const tbody  = $('cards-tbody');
+  // Force a server read so we always see the latest saved URLs (not stale cache)
+  const snap = await db.collection('cards')
+    .where('activityId', '==', selectedActivityForCards)
+    .get({ source: 'server' });
+  const cards = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const tbody = $('cards-tbody');
   tbody.innerHTML = '';
   if (cards.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No cards yet. Click Add Card below.</td></tr>';
@@ -283,18 +290,29 @@ async function refreshCardsTable() {
   }
   cards.forEach(c => {
     const tr = document.createElement('tr');
+    const preview = (c.frontText || c.english || '').substring(0, 60);
     tr.innerHTML = `
       <td>${c.order}</td>
-      <td>${(c.frontText || c.english || '').substring(0,60)}…</td>
+      <td>${preview}${preview.length >= 60 ? '…' : ''}</td>
       <td><span class="badge badge-muted">${c.type}</span></td>
       <td>${c.audioUrl ? '✅ Audio' : '—'}</td>
       <td>
-        <button class="btn btn-sm btn-outline" onclick="editCard('${c.id}')">Edit</button>
-        <button class="btn btn-sm btn-danger" style="margin-left:8px" onclick="deleteCard('${c.id}')">Delete</button>
+        <button class="btn btn-sm btn-outline" data-action="edit"   data-id="${c.id}">Edit</button>
+        <button class="btn btn-sm btn-danger"  data-action="delete" data-id="${c.id}" style="margin-left:8px">Delete</button>
       </td>`;
     tbody.appendChild(tr);
   });
 }
+
+// One-time event delegation for the cards table (no more inline onclick)
+$('cards-tbody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id     = btn.dataset.id;
+  const action = btn.dataset.action;
+  if (action === 'edit')   await editCard(id);
+  if (action === 'delete') await deleteCard(id);
+});
 
 $('add-card-btn').addEventListener('click', async () => {
   if (!selectedActivityForCards) { showToast('Please select an activity first.', 'error'); return; }
@@ -316,13 +334,35 @@ $('add-card-btn').addEventListener('click', async () => {
 });
 
 async function editCard(id) {
-  const snap = await db.collection('cards').doc(id).get();
-  const card = { id, ...snap.data() };
-  openModal('Edit Card', await buildCardForm(card, card.type), async (data) => {
-    await db.collection('cards').doc(id).update(data);
-    showToast('Card updated!', 'success');
-    await refreshCardsTable();
-  }, { hasFileUploads: true, actType: card.type });
+  try {
+    showLoading('Loading card…');
+    // Force server read so we get the latest version of the card
+    const snap = await db.collection('cards').doc(id).get({ source: 'server' });
+    hideLoading();
+
+    if (!snap.exists) {
+      showToast('Card not found — try refreshing the list.', 'error');
+      return;
+    }
+    const card = { id, ...snap.data() };
+
+    openModal('Edit Card', await buildCardForm(card, card.type), async (data) => {
+      // If no new file was uploaded, keep the existing URL so we don't wipe it
+      if (!data.audioUrl) data.audioUrl = card.audioUrl || '';
+      if (!data.imageUrl) data.imageUrl = card.imageUrl || '';
+
+      console.log('[editCard] Saving card', id, 'audioUrl:', data.audioUrl, 'imageUrl:', data.imageUrl);
+      await db.collection('cards').doc(id).update(data);
+      console.log('[editCard] Firestore update done');
+      showToast('Card updated!', 'success');
+      await refreshCardsTable();
+    }, { hasFileUploads: true, actType: card.type });
+
+  } catch (e) {
+    hideLoading();
+    console.error('[editCard] Error:', e);
+    showToast('Could not open card: ' + e.message, 'error');
+  }
 }
 
 async function deleteCard(id) {
